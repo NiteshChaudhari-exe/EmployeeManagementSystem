@@ -1,6 +1,6 @@
 # Employee Management System (EMS)
 
-> **🎉 Status Update:** Week 1 Complete ✅ | Week 2 Complete ✅ | Backend Production Ready 🚀
+> **🎉 Status Update:** Week 1 Complete ✅ | Week 2 Complete ✅ | Backend Production Ready 🚀 | Git Author Fixed ✅
 
 A production-ready, full-featured Employee Management System built with React, Redux Toolkit, TypeScript, Tailwind CSS, and Node.js/Express backend with MongoDB.
 
