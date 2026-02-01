@@ -1,13 +1,18 @@
-const express = require('express');
+import express from 'express';
+import * as leaveController from '../controllers/leaveController.js';
+import { authenticateToken, authorize } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
-// const leaveController = require('../controllers/leaveController');
 
-// router.get('/', leaveController.getAllLeaves);
-// router.post('/', leaveController.createLeave);
-// router.get('/:id', leaveController.getLeaveById);
-// router.put('/:id', leaveController.updateLeave);
-// router.delete('/:id', leaveController.deleteLeave);
-// router.post('/:id/approve', leaveController.approveLeave);
-// router.post('/:id/reject', leaveController.rejectLeave);
+// All routes protected by authentication
+router.use(authenticateToken);
 
-module.exports = router;
+router.get('/', leaveController.getAllLeaves);
+router.post('/', leaveController.createLeave);
+router.get('/:id', leaveController.getLeave);
+router.put('/:id', leaveController.updateLeave);
+router.delete('/:id', authorize('admin'), leaveController.deleteLeave);
+router.post('/:id/approve', authorize('admin', 'hr_manager'), leaveController.approveLeave);
+router.post('/:id/reject', authorize('admin', 'hr_manager'), leaveController.rejectLeave);
+
+export default router;

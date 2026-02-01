@@ -1,11 +1,16 @@
-const express = require('express');
+import express from 'express';
+import * as attendanceController from '../controllers/attendanceController.js';
+import { authenticateToken, authorize } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
-// const attendanceController = require('../controllers/attendanceController');
 
-// router.get('/', attendanceController.getAllAttendance);
-// router.post('/', attendanceController.createAttendance);
-// router.get('/:id', attendanceController.getAttendanceById);
-// router.put('/:id', attendanceController.updateAttendance);
-// router.delete('/:id', attendanceController.deleteAttendance);
+// All routes protected by authentication
+router.use(authenticateToken);
 
-module.exports = router;
+router.get('/', attendanceController.getAllAttendance);
+router.post('/', authorize('admin', 'hr_manager'), attendanceController.createAttendance);
+router.get('/:id', attendanceController.getAttendance);
+router.put('/:id', authorize('admin', 'hr_manager'), attendanceController.updateAttendance);
+router.delete('/:id', authorize('admin'), attendanceController.deleteAttendance);
+
+export default router;

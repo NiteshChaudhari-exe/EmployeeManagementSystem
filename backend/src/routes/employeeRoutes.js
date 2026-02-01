@@ -1,11 +1,16 @@
-const express = require('express');
+import express from 'express';
+import * as employeeController from '../controllers/employeeController.js';
+import { authenticateToken, authorize } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
-// const employeeController = require('../controllers/employeeController');
 
-// router.get('/', employeeController.getAllEmployees);
-// router.post('/', employeeController.createEmployee);
-// router.get('/:id', employeeController.getEmployeeById);
-// router.put('/:id', employeeController.updateEmployee);
-// router.delete('/:id', employeeController.deleteEmployee);
+// All routes protected by authentication
+router.use(authenticateToken);
 
-module.exports = router;
+router.get('/', employeeController.getAllEmployees);
+router.post('/', authorize('admin', 'hr_manager'), employeeController.createEmployee);
+router.get('/:id', employeeController.getEmployee);
+router.put('/:id', authorize('admin', 'hr_manager'), employeeController.updateEmployee);
+router.delete('/:id', authorize('admin'), employeeController.deleteEmployee);
+
+export default router;

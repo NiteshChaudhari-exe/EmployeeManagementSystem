@@ -1,11 +1,16 @@
-const express = require('express');
+import express from 'express';
+import * as departmentController from '../controllers/departmentController.js';
+import { authenticateToken, authorize } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
-// const departmentController = require('../controllers/departmentController');
 
-// router.get('/', departmentController.getAllDepartments);
-// router.post('/', departmentController.createDepartment);
-// router.get('/:id', departmentController.getDepartmentById);
-// router.put('/:id', departmentController.updateDepartment);
-// router.delete('/:id', departmentController.deleteDepartment);
+// All routes protected by authentication
+router.use(authenticateToken);
 
-module.exports = router;
+router.get('/', departmentController.getAllDepartments);
+router.post('/', authorize('admin', 'hr_manager'), departmentController.createDepartment);
+router.get('/:id', departmentController.getDepartment);
+router.put('/:id', authorize('admin', 'hr_manager'), departmentController.updateDepartment);
+router.delete('/:id', authorize('admin'), departmentController.deleteDepartment);
+
+export default router;
