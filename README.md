@@ -1,6 +1,18 @@
 # Employee Management System (EMS)
 
-A production-ready, full-featured Employee Management System built with React, Redux Toolkit, TypeScript, and Tailwind CSS.
+> **🎉 Status Update:** Week 1 Complete ✅ | Week 2 Complete ✅ | Backend Production Ready 🚀
+
+A production-ready, full-featured Employee Management System built with React, Redux Toolkit, TypeScript, Tailwind CSS, and Node.js/Express backend with MongoDB.
+
+## 📊 Development Progress
+
+| Phase | Status | Details |
+|-------|--------|---------|
+| **Week 1** | ✅ Complete | Frontend setup, 31/31 tests passing, clean codebase |
+| **Week 2** | ✅ Complete | Backend foundation, MongoDB models, Auth system, 6 API controllers |
+| **Week 3** | 🔄 Next | Frontend-Backend integration, advanced endpoints |
+| **Week 4** | ⏳ Planned | Advanced features, file uploads, email system |
+| **Week 5** | ⏳ Planned | Production hardening, deployment, monitoring |
 
 ## 🎯 Project Overview
 
@@ -37,6 +49,56 @@ src/
 │   │   └── mockData.ts      # Sample data for demo
 │   └── App.tsx              # Main application component
 ```
+
+### Backend Architecture (Week 2 ✅)
+
+```
+backend/
+├── src/
+│   ├── utils/
+│   │   └── db.js            # MongoDB connection
+│   ├── models/              # Mongoose schemas (6 models)
+│   │   ├── User.js          # User with bcryptjs password hashing
+│   │   ├── Employee.js      # Employee data
+│   │   ├── Department.js    # Department management
+│   │   ├── Attendance.js    # Attendance tracking
+│   │   ├── Leave.js         # Leave requests with approval
+│   │   └── Payroll.js       # Salary calculations
+│   ├── services/
+│   │   └── authService.js   # JWT, registration, login
+│   ├── middleware/
+│   │   └── authMiddleware.js # Authentication & RBAC
+│   ├── controllers/         # Request handlers (6 controllers)
+│   │   ├── authController.js
+│   │   ├── employeeController.js
+│   │   ├── departmentController.js
+│   │   ├── attendanceController.js
+│   │   ├── leaveController.js
+│   │   └── payrollController.js
+│   ├── routes/              # API routes (6 route files)
+│   │   ├── authRoutes.js
+│   │   ├── employeeRoutes.js
+│   │   ├── departmentRoutes.js
+│   │   ├── attendanceRoutes.js
+│   │   ├── leaveRoutes.js
+│   │   └── payrollRoutes.js
+│   └── app.js              # Express app entry
+├── .env                     # Configuration
+├── package.json
+└── node_modules/
+```
+
+**Backend Features:**
+- ✅ MongoDB integration with Mongoose ODM
+- ✅ JWT-based authentication (7-day expiration)
+- ✅ bcryptjs password hashing (10 salt rounds)
+- ✅ Role-based access control (admin, hr_manager, employee)
+- ✅ 6 Mongoose models with validation and relationships
+- ✅ 6 CRUD controllers with error handling
+- ✅ Protected routes with authorization middleware
+- ✅ Proper HTTP status codes and response format
+- ✅ Input validation on all endpoints
+- ✅ Running on port 5000 with ES6 modules
 
 ## 🔐 Authentication & Authorization
 
