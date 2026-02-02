@@ -1,14 +1,23 @@
 // Employees Management Page
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import type { RootState } from '@/app/store';
-import { addEmployee, updateEmployee, deleteEmployee } from '@/app/store/employeeSlice';
+import type { RootState, AppDispatch } from '@/app/store';
+import { 
+  fetchEmployees, 
+  createEmployee, 
+  updateEmployee, 
+  deleteEmployee,
+  setSearch,
+  setPage,
+  clearError
+} from '@/app/store/employeeSlice';
 import { mockDepartments } from '@/app/data/mockData';
 import type { Employee } from '@/app/types';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
+import LoadingSpinner from '@/app/components/LoadingSpinner';
 import { Card, CardHeader, CardTitle, CardContent } from '@/app/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
@@ -19,14 +28,16 @@ import { Search, Plus, Edit, Trash2, Mail, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Employees = () => {
-  const employees = useSelector((state: RootState) => state.employees.employees);
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
+  const { employees, loading, error, page, limit, search, total } = useSelector(
+    (state: RootState) => state.employees
+  );
   
-  const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [localSearch, setLocalSearch] = useState('');
   
   // Form state
   const [formData, setFormData] = useState({
@@ -44,12 +55,10 @@ const Employees = () => {
     status: 'active' as const,
   });
 
-  // Filter employees
-  const filteredEmployees = employees.filter((emp) =>
-    `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Load employees on mount
+  useEffect(() => {
+    dispatch(fetchEmployees({ page, limit, search }));
+  }, [dispatch, page, limit, search]);
 
   const resetForm = () => {
     setFormData({
@@ -68,67 +77,105 @@ const Employees = () => {
     });
   };
 
-  const handleAdd = () => {
-    const newEmployee: Employee = {
-      id: `emp-${Date.now()}`,
-      ...formData,
-      employeeId: `EMP${String(employees.length + 1).padStart(3, '0')}`,
-      basicSalary: parseFloat(formData.basicSalary),
-      allowances: parseFloat(formData.allowances),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    dispatch(addEmployee(newEmployee));
-    toast.success('Employee added successfully!');
-    setIsAddDialogOpen(false);
-    resetForm();
+  const handleAdd = async () => {
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      return;
+    }
+
+    try {
+      const newEmployee = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        dateOfBirth: formData.dateOfBirth,
+        address: formData.address,
+        departmentId: formData.departmentId,
+        designation: formData.designation,
+        joinDate: formData.joinDate,
+        basicSalary: parseFloat(formData.basicSalary) || 0,
+        allowances: parseFloat(formData.allowances) || 0,
+        status: formData.status,
+      };
+
+      await dispatch(createEmployee(newEmployee)).unwrap();
+      toast.success('Employee added successfully!');
+      setIsAddDialogOpen(false);
+      resetForm();
+      dispatch(fetchEmployees({ page, limit, search }));
+    } catch (err: any) {
+      toast.error(err || 'Failed to add employee');
+    }
   };
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!selectedEmployee) return;
-    
-    const updatedEmployee: Employee = {
-      ...selectedEmployee,
-      ...formData,
-      basicSalary: parseFloat(formData.basicSalary),
-      allowances: parseFloat(formData.allowances),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    dispatch(updateEmployee(updatedEmployee));
-    toast.success('Employee updated successfully!');
-    setIsEditDialogOpen(false);
-    setSelectedEmployee(null);
-    resetForm();
+
+    try {
+      const updatedEmployee = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        dateOfBirth: formData.dateOfBirth,
+        address: formData.address,
+        departmentId: formData.departmentId,
+        designation: formData.designation,
+        joinDate: formData.joinDate,
+        basicSalary: parseFloat(formData.basicSalary) || 0,
+        allowances: parseFloat(formData.allowances) || 0,
+        status: formData.status,
+      };
+
+      await dispatch(
+        updateEmployee({ id: selectedEmployee._id, data: updatedEmployee })
+      ).unwrap();
+      
+      toast.success('Employee updated successfully!');
+      setIsEditDialogOpen(false);
+      setSelectedEmployee(null);
+      resetForm();
+      dispatch(fetchEmployees({ page, limit, search }));
+    } catch (err: any) {
+      toast.error(err || 'Failed to update employee');
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!selectedEmployee) return;
-    
-    dispatch(deleteEmployee(selectedEmployee.id));
-    toast.success('Employee deleted successfully!');
-    setIsDeleteDialogOpen(false);
-    setSelectedEmployee(null);
+
+    try {
+      await dispatch(deleteEmployee(selectedEmployee._id)).unwrap();
+      toast.success('Employee deleted successfully!');
+      setIsDeleteDialogOpen(false);
+      setSelectedEmployee(null);
+      dispatch(fetchEmployees({ page, limit, search }));
+    } catch (err: any) {
+      toast.error(err || 'Failed to delete employee');
+    }
   };
 
-  const openEditDialog = (employee: Employee) => {
+  const openEditDialog = (employee: any) => {
     setSelectedEmployee(employee);
     setFormData({
       firstName: employee.firstName,
       lastName: employee.lastName,
       email: employee.email,
       phone: employee.phone,
-      dateOfBirth: employee.dateOfBirth,
+      dateOfBirth: employee.dateOfBirth || '',
       address: employee.address,
       departmentId: employee.departmentId,
       designation: employee.designation,
-      joinDate: employee.joinDate,
-      basicSalary: employee.basicSalary.toString(),
-      allowances: employee.allowances.toString(),
+      joinDate: employee.joinDate || '',
+      basicSalary: employee.basicSalary?.toString() || '',
+      allowances: employee.allowances?.toString() || '',
       status: employee.status,
     });
     setIsEditDialogOpen(true);
+  };
+
+  const handleSearch = () => {
+    dispatch(setSearch(localSearch));
   };
 
   const getDepartmentName = (deptId: string) => {
@@ -152,100 +199,130 @@ const Employees = () => {
       {/* Search & Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search by name, email, or employee ID..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search by name or email..."
+                className="pl-10"
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleSearch}>Search</Button>
           </div>
         </CardContent>
       </Card>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={() => dispatch(clearError())}
+            className="mt-2"
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
+
       {/* Employee Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Employee List ({filteredEmployees.length})</CardTitle>
+          <CardTitle>
+            Employee List {loading ? 
+              '(Loading...)' : 
+              `(${employees.length} of ${total})`
+            }
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employee ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Designation</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEmployees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell className="font-medium">{employee.employeeId}</TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{employee.firstName} {employee.lastName}</p>
-                        <p className="text-sm text-gray-500">{employee.designation}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Mail className="w-3 h-3 text-gray-400" />
-                          {employee.email}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Phone className="w-3 h-3 text-gray-400" />
-                          {employee.phone}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getDepartmentName(employee.departmentId)}</TableCell>
-                    <TableCell>{employee.designation}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          employee.status === 'active'
-                            ? 'default'
-                            : employee.status === 'resigned'
-                            ? 'secondary'
-                            : 'destructive'
-                        }
-                      >
-                        {employee.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEditDialog(employee)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setSelectedEmployee(employee);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          {loading && <LoadingSpinner loading={true} message="Loading employees..." />}
+          {!loading && employees.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No employees found</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead>Designation</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {employees.map((employee: any) => (
+                    <TableRow key={employee._id}>
+                      <TableCell className="font-medium">{employee.employeeId}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{employee.firstName} {employee.lastName}</p>
+                          <p className="text-sm text-gray-500">{employee.designation}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="w-3 h-3 text-gray-400" />
+                            {employee.email}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Phone className="w-3 h-3 text-gray-400" />
+                            {employee.phone}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getDepartmentName(employee.departmentId)}</TableCell>
+                      <TableCell>{employee.designation}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            employee.status === 'active'
+                              ? 'default'
+                              : employee.status === 'resigned'
+                              ? 'secondary'
+                              : 'destructive'
+                          }
+                        >
+                          {employee.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditDialog(employee)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setSelectedEmployee(employee);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
