@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { store } from '@/app/store';
 import { useAuth } from '@/app/hooks/useAuth';
 import { Toaster } from '@/app/components/ui/sonner';
+import ErrorBoundary from '@/app/components/ErrorBoundary';
 
 // Pages
 import Login from '@/app/pages/Login';
@@ -66,11 +67,13 @@ const AppRoutes = () => {
 // Main App Component
 export default function App() {
   return (
-    <Provider store={store}>
-      <BrowserRouter>
-        <AppRoutes />
-        <Toaster position="top-right" />
-      </BrowserRouter>
-    </Provider>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <BrowserRouter>
+          <AppRoutes />
+          <Toaster position="top-right" />
+        </BrowserRouter>
+      </Provider>
+    </ErrorBoundary>
   );
 }

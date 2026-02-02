@@ -2,6 +2,10 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { connectDB } from './utils/db.js';
+import { validateEnv } from './utils/validateEnv.js';
+
+// Validate environment variables before starting
+validateEnv();
 
 const app = express();
 
