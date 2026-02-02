@@ -16,7 +16,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
-import { Building2, Users, Plus, Edit, Trash2 } from 'lucide-react';
+import { Building2, Users, Plus, Edit, Trash2, Search, Download, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
 
@@ -29,6 +29,8 @@ const Departments = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedDept, setSelectedDept] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'created'>('name');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -39,6 +41,19 @@ const Departments = () => {
   useEffect(() => {
     dispatch(fetchDepartments());
   }, [dispatch]);
+  
+  // Filter and sort departments
+  const filteredDepts = departments
+    .filter(d => 
+      d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (d.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
+    )
+    .sort((a, b) => {
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name);
+      }
+      return 0;
+    });
 
   const handleAdd = async () => {
     if (!formData.name) return;
@@ -128,13 +143,65 @@ const Departments = () => {
 
       {loading && <LoadingSpinner loading={true} message="Loading departments..." />}
 
-      {!loading && departments.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No departments found</p>
-        </div>
-      ) : (
+      {!loading && (
+        <>
+          {/* Search & Filter */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                Search & Filter
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search by name or description..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={sortBy === 'name' ? 'default' : 'outline'}
+                    onClick={() => setSortBy('name')}
+                    className="whitespace-nowrap"
+                  >
+                    Sort by Name
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const filtered = filteredDepts
+                        .map(d => [d.name, d.description || ''].join(','))
+                        .join('\n');
+                      const csv = 'Department Name,Description\n' + filtered;
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'departments.csv';
+                      a.click();
+                      toast.success('Downloaded departments.csv');
+                    }}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {filteredDepts.length === 0 && searchTerm ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">No departments match your search</p>
+            </div>
+          ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {departments.map((dept: any) => (
+          {filteredDepts.map((dept: any) => (
             <Card key={dept._id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -179,6 +246,8 @@ const Departments = () => {
             </Card>
           ))}
         </div>
+          )}
+        </>
       )}
 
       {/* Add Department Dialog */}

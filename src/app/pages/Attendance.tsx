@@ -1,6 +1,6 @@
 // Attendance Management Page
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '@/app/store';
 import { 
@@ -11,7 +11,15 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/app/components/ui/ca
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/app/components/ui/table';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
-import { Clock } from 'lucide-react';
+import { Input } from '@/app/components/ui/input';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/app/components/ui/select';
+import { Clock, Download, Filter } from 'lucide-react';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
 import { toast } from 'sonner';
 
@@ -20,10 +28,20 @@ const Attendance = () => {
   const { records, loading, error } = useSelector(
     (state: RootState) => state.attendance
   );
+  
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterDate, setFilterDate] = useState('');
 
   useEffect(() => {
     dispatch(fetchAttendance());
   }, [dispatch]);
+  
+  // Filter records based on status and date
+  const filteredRecords = records.filter((r: any) => {
+    const statusMatch = filterStatus === 'all' || r.status === filterStatus;
+    const dateMatch = !filterDate || new Date(r.date).toLocaleDateString() === new Date(filterDate).toLocaleDateString();
+    return statusMatch && dateMatch;
+  });
 
   const presentToday = records.filter((r: any) => {
     const date = new Date(r.date);
@@ -92,12 +110,81 @@ const Attendance = () => {
             </Card>
           </div>
 
+          {/* Filters */}
           <Card>
             <CardHeader>
-              <CardTitle>Attendance Records ({records.length})</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                Filters
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {records.length === 0 ? (
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Date</label>
+                  <Input 
+                    type="date" 
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Status</label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="present">Present</SelectItem>
+                      <SelectItem value="absent">Absent</SelectItem>
+                      <SelectItem value="leave">On Leave</SelectItem>
+                      <SelectItem value="half-day">Half Day</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 flex items-end gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setFilterDate('');
+                      setFilterStatus('all');
+                    }}
+                    className="w-full"
+                  >
+                    Reset
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      const filtered = filteredRecords
+                        .map(r => [r.employeeId, new Date(r.date).toLocaleDateString(), r.status, r.workHours].join(','))
+                        .join('\n');
+                      const csv = 'Employee ID,Date,Status,Work Hours\n' + filtered;
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'attendance.csv';
+                      a.click();
+                      toast.success('Downloaded attendance.csv');
+                    }}
+                    className="w-full"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export CSV
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Attendance Records ({filteredRecords.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filteredRecords.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-gray-500">No attendance records found</p>
                 </div>
@@ -115,7 +202,7 @@ const Attendance = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {records.slice(0, 20).map((record: any) => (
+                      {filteredRecords.slice(0, 20).map((record: any) => (
                         <TableRow key={record._id}>
                           <TableCell className="font-medium">{record.employeeId}</TableCell>
                           <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>

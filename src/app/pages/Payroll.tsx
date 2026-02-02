@@ -16,7 +16,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Alert, AlertTitle, AlertDescription } from '@/app/components/ui/alert';
-import { DollarSign, Download, AlertCircle } from 'lucide-react';
+import { DollarSign, Download, AlertCircle, Filter } from 'lucide-react';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/app/components/ui/select';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
 import { toast } from 'sonner';
 
@@ -26,10 +33,19 @@ const Payroll = () => {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [generateMonth, setGenerateMonth] = useState('');
   const [generateYear, setGenerateYear] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterMonth, setFilterMonth] = useState('');
 
   useEffect(() => {
     dispatch(fetchPayrollRecords());
   }, [dispatch]);
+  
+  // Filter records
+  const filteredRecords = records.filter((r: any) => {
+    const statusMatch = filterStatus === 'all' || r.status === filterStatus;
+    const monthMatch = !filterMonth || `${r.month}/${r.year}`.includes(filterMonth);
+    return statusMatch && monthMatch;
+  });
 
   const handleGenerate = async () => {
     if (!generateMonth || !generateYear) {
@@ -151,9 +167,143 @@ const Payroll = () => {
         </Card>
       </div>
 
+      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Payroll Records</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Month</label>
+              <Input 
+                type="month" 
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Status</label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 flex items-end gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setFilterMonth('');
+                  setFilterStatus('all');
+                }}
+                className="w-full"
+              >
+                Reset
+              </Button>
+              <Button 
+                onClick={() => {
+                  const filtered = filteredRecords
+                    .map(r => [r.employeeId, `${r.month}/${r.year}`, r.basicSalary, r.deductions, r.netAmount, r.status].join(','))
+                    .join('\n');
+                  const csv = 'Employee ID,Month/Year,Basic Salary,Deductions,Net Amount,Status\n' + filtered;
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'payroll.csv';
+                  a.click();
+                  toast.success('Downloaded payroll.csv');
+                }}
+                className="w-full"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Month</label>
+              <Input 
+                type="month" 
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Status</label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 flex items-end gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setFilterMonth('');
+                  setFilterStatus('all');
+                }}
+                className="w-full"
+              >
+                Reset
+              </Button>
+              <Button 
+                onClick={() => {
+                  const filtered = filteredRecords
+                    .map(r => [r.employeeId, `${r.month}/${r.year}`, r.basicSalary, r.deductions, r.netAmount, r.status].join(','))
+                    .join('\n');
+                  const csv = 'Employee ID,Month/Year,Basic Salary,Deductions,Net Amount,Status\n' + filtered;
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'payroll.csv';
+                  a.click();
+                  toast.success('Downloaded payroll.csv');
+                }}
+                className="w-full"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Payroll Records ({filteredRecords.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -169,8 +319,8 @@ const Payroll = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {records.length > 0 ? (
-                records.map((payroll) => (
+              {filteredRecords.length > 0 ? (
+                filteredRecords.map((payroll) => (
                   <TableRow key={payroll._id}>
                     <TableCell className="font-medium">{payroll.employeeId}</TableCell>
                     <TableCell>{payroll.month}/{payroll.year}</TableCell>

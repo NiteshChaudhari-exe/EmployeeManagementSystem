@@ -1,6 +1,6 @@
 // Leave Management Page
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '@/app/store';
 import { 
@@ -13,8 +13,16 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/app/components/ui/ca
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/app/components/ui/table';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
+import { Input } from '@/app/components/ui/input';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/app/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/app/components/ui/alert';
-import { Plus, Check, X, AlertCircle } from 'lucide-react';
+import { Plus, Check, X, AlertCircle, Filter, Download } from 'lucide-react';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
 import { toast } from 'sonner';
 
@@ -23,10 +31,20 @@ const Leaves = () => {
   const { requests, loading, error } = useSelector(
     (state: RootState) => state.leaves
   );
+  
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterLeaveType, setFilterLeaveType] = useState('all');
 
   useEffect(() => {
     dispatch(fetchLeaveRequests());
   }, [dispatch]);
+  
+  // Filter requests
+  const filteredRequests = requests.filter((r: any) => {
+    const statusMatch = filterStatus === 'all' || r.status === filterStatus;
+    const typeMatch = filterLeaveType === 'all' || r.leaveType === filterLeaveType;
+    return statusMatch && typeMatch;
+  });
 
   const pendingCount = requests.filter((r: any) => r.status === 'pending').length;
   const approvedCount = requests.filter((r: any) => r.status === 'approved').length;
@@ -106,9 +124,83 @@ const Leaves = () => {
         </Card>
       </div>
 
+      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>All Leave Requests</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Status</label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Leave Type</label>
+              <Select value={filterLeaveType} onValueChange={setFilterLeaveType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="casual">Casual Leave</SelectItem>
+                  <SelectItem value="sick">Sick Leave</SelectItem>
+                  <SelectItem value="personal">Personal Leave</SelectItem>
+                  <SelectItem value="annual">Annual Leave</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 flex items-end gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setFilterStatus('all');
+                  setFilterLeaveType('all');
+                }}
+                className="w-full"
+              >
+                Reset
+              </Button>
+              <Button 
+                onClick={() => {
+                  const filtered = filteredRequests
+                    .map(r => [r.employeeId, new Date(r.startDate).toLocaleDateString(), new Date(r.endDate).toLocaleDateString(), r.leaveType, r.status].join(','))
+                    .join('\n');
+                  const csv = 'Employee ID,Start Date,End Date,Leave Type,Status\n' + filtered;
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'leave-requests.csv';
+                  a.click();
+                  toast.success('Downloaded leave-requests.csv');
+                }}
+                className="w-full"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All Leave Requests ({filteredRequests.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -124,8 +216,8 @@ const Leaves = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.length > 0 ? (
-                requests.map((leave) => (
+              {filteredRequests.length > 0 ? (
+                filteredRequests.map((leave) => (
                   <TableRow key={leave._id}>
                     <TableCell className="font-medium">{leave.employeeId}</TableCell>
                     <TableCell className="capitalize">{leave.leaveType}</TableCell>
