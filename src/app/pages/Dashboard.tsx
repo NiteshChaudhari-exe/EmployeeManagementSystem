@@ -1,10 +1,14 @@
 // Dashboard Page Component
 
-import React from 'react';
-import { useSelector } from 'react-redux';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import type { RootState } from '@/app/store';
-import { mockDepartments, mockAttendance, mockLeaveRequests, mockPayrollRecords } from '@/app/data/mockData';
+import type { RootState, AppDispatch } from '@/app/store';
+import { fetchEmployees } from '@/app/store/employeeSlice';
+import { fetchDepartments } from '@/app/store/departmentSlice';
+import { fetchAttendance } from '@/app/store/attendanceSlice';
+import { fetchLeaveRequests } from '@/app/store/leaveSlice';
+import { fetchPayrollRecords } from '@/app/store/payrollSlice';
 import { Card, CardHeader, CardTitle, CardContent } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -12,25 +16,47 @@ import { Users, UserCheck, UserX, FileText, DollarSign, TrendingUp, Calendar, Bu
 import { useAuth } from '@/app/hooks/useAuth';
 
 const Dashboard = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const { user } = useAuth();
-  const employees = useSelector((state: RootState) => state.employees.employees);
   const navigate = useNavigate();
+  
+  // Get data from Redux slices
+  const employees = useSelector((state: RootState) => state.employees.employees);
+  const departments = useSelector((state: RootState) => state.departments.departments);
+  const attendanceRecords = useSelector((state: RootState) => state.attendance.records);
+  const leaveRequests = useSelector((state: RootState) => state.leaves.requests);
+  const payrollRecords = useSelector((state: RootState) => state.payroll.records);
+
+  // Fetch all data on component mount
+  useEffect(() => {
+    dispatch(fetchEmployees({ page: 1, limit: 1000 }));
+    dispatch(fetchDepartments());
+    dispatch(fetchAttendance());
+    dispatch(fetchLeaveRequests());
+    dispatch(fetchPayrollRecords());
+  }, [dispatch]);
 
   // Calculate statistics
+  const todayAttendance = attendanceRecords.filter(a => {
+    const recordDate = new Date(a.date).toDateString();
+    const today = new Date().toDateString();
+    return recordDate === today;
+  });
+
   const stats = {
     totalEmployees: employees.length,
     activeEmployees: employees.filter((e) => e.status === 'active').length,
-    totalDepartments: mockDepartments.length,
-    pendingLeaves: mockLeaveRequests.filter((l) => l.status === 'pending').length,
-    todayPresent: mockAttendance.filter((a) => a.status === 'present').length,
-    todayAbsent: employees.length - mockAttendance.filter((a) => a.status === 'present').length,
-    monthlyPayroll: mockPayrollRecords.reduce((sum, p) => sum + p.netSalary, 0),
+    totalDepartments: departments.length,
+    pendingLeaves: leaveRequests.filter((l) => l.status === 'pending').length,
+    todayPresent: todayAttendance.filter((a) => a.status === 'present').length,
+    todayAbsent: employees.length - todayAttendance.filter((a) => a.status === 'present').length,
+    monthlyPayroll: payrollRecords.reduce((sum, p) => sum + (p.netAmount || 0), 0),
   };
 
   // Department distribution data
-  const deptData = mockDepartments.map((dept) => ({
+  const deptData = departments.map((dept) => ({
     name: dept.name,
-    count: employees.filter((emp) => emp.departmentId === dept.id).length,
+    count: employees.filter((emp) => emp.departmentId === dept._id).length,
   }));
 
   // Status distribution data
@@ -135,7 +161,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={deptData}>
+              <BarChart data={deptData.length > 0 ? deptData : [{ name: 'No Data', count: 0 }]}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -155,7 +181,7 @@ const Dashboard = () => {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={statusData}
+                  data={statusData.filter(d => d.value > 0).length > 0 ? statusData : [{ name: 'No Data', value: 0 }]}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -184,32 +210,32 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockLeaveRequests.slice(0, 5).map((leave) => {
-                const employee = employees.find((e) => e.id === leave.employeeId);
-                return (
-                  <div key={leave.id} className="flex items-center justify-between border-b pb-3 last:border-0">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {employee?.firstName} {employee?.lastName}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {leave.leaveType.charAt(0).toUpperCase() + leave.leaveType.slice(1)} Leave - {leave.days} day(s)
-                      </p>
-                    </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        leave.status === 'approved'
-                          ? 'bg-green-100 text-green-700'
-                          : leave.status === 'rejected'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}
-                    >
-                      {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
-                    </span>
+              {leaveRequests.slice(0, 5).map((leave) => (
+                <div key={leave._id} className="flex items-center justify-between border-b pb-3 last:border-0">
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      Employee #{leave.employeeId}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {leave.leaveType.charAt(0).toUpperCase() + leave.leaveType.slice(1)} Leave
+                    </p>
                   </div>
-                );
-              })}
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      leave.status === 'approved'
+                        ? 'bg-green-100 text-green-700'
+                        : leave.status === 'rejected'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}
+                  >
+                    {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
+                  </span>
+                </div>
+              ))}
+              {leaveRequests.length === 0 && (
+                <p className="text-center text-gray-500 py-4">No leave requests</p>
+              )}
             </div>
             <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/leaves')}>
               View All Requests
