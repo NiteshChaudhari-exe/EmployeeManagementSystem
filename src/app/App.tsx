@@ -4,9 +4,9 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { store } from '@/app/store';
-import { useAuth } from '@/app/hooks/useAuth';
 import { Toaster } from '@/app/components/ui/sonner';
 import ErrorBoundary from '@/app/components/ErrorBoundary';
+import PrivateRoute from '@/app/components/PrivateRoute';
 
 // Pages
 import Login from '@/app/pages/Login';
@@ -19,34 +19,21 @@ import Payroll from '@/app/pages/Payroll';
 import Reports from '@/app/pages/Reports';
 import Layout from '@/app/components/Layout';
 
-// Protected Route Component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
 // App Routes Component
 const AppRoutes = () => {
-  const { isAuthenticated } = useAuth();
-  
   return (
     <Routes>
       <Route 
         path="/login" 
-        element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} 
+        element={<Login />} 
       />
       
       <Route
         path="/"
         element={
-          <ProtectedRoute>
+          <PrivateRoute>
             <Layout />
-          </ProtectedRoute>
+          </PrivateRoute>
         }
       >
         <Route index element={<Dashboard />} />
