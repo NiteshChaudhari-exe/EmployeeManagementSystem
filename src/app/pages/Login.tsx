@@ -2,45 +2,66 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { login } from '@/app/store/authSlice';
-import { mockUsers } from '@/app/data/mockData';
+import { useDispatch, useSelector } from 'react-redux';
+import { loginUser, registerUser } from '@/app/store/authSlice';
+import { AppDispatch, RootState } from '@/app/store';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/app/components/ui/card';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
-import { Building2 } from 'lucide-react';
+import { Building2, Loader2 } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [isRegister, setIsRegister] = useState(false);
+  const [localError, setLocalError] = useState('');
+  
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
+  const { loading, error } = useSelector((state: RootState) => state.auth);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+    setLocalError('');
+    
+    if (!email || !password) {
+      setLocalError('Please fill in all fields');
+      return;
+    }
 
-    // Simulate API call
-    setTimeout(() => {
-      const user = mockUsers.find((u) => u.email === email);
-      
-      if (user && password === 'password') {
-        // Mock JWT token
-        const token = `mock-jwt-token-${user.id}-${Date.now()}`;
-        
-        dispatch(login({ user, token }));
+    try {
+      const result = await dispatch(loginUser({ email, password })).unwrap();
+      if (result) {
         navigate('/');
-      } else {
-        setError('Invalid email or password. Use "password" for all accounts.');
       }
-      
-      setLoading(false);
-    }, 1000);
+    } catch (err: any) {
+      setLocalError(err || 'Login failed');
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLocalError('');
+
+    if (!email || !password || !firstName || !lastName) {
+      setLocalError('Please fill in all fields');
+      return;
+    }
+
+    try {
+      const result = await dispatch(
+        registerUser({ email, password, firstName, lastName })
+      ).unwrap();
+      if (result) {
+        navigate('/');
+      }
+    } catch (err: any) {
+      setLocalError(err || 'Registration failed');
+    }
   };
 
   return (
@@ -53,15 +74,45 @@ const Login = () => {
             </div>
           </div>
           <CardTitle className="text-3xl font-bold">Employee Management System</CardTitle>
-          <CardDescription>Sign in to access your account</CardDescription>
+          <CardDescription>
+            {isRegister ? 'Create a new account' : 'Sign in to access your account'}
+          </CardDescription>
         </CardHeader>
         
-        <form onSubmit={handleLogin}>
+        <form onSubmit={isRegister ? handleRegister : handleLogin}>
           <CardContent className="space-y-4">
-            {error && (
+            {(error || localError) && (
               <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{error || localError}</AlertDescription>
               </Alert>
+            )}
+            
+            {isRegister && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required={isRegister}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required={isRegister}
+                  />
+                </div>
+              </>
             )}
             
             <div className="space-y-2">
@@ -90,23 +141,37 @@ const Login = () => {
 
             <div className="pt-2">
               <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                <strong>Demo Credentials:</strong><br />
-                • Admin: admin@company.com<br />
-                • HR Manager: jane.smith@company.com<br />
-                • Employee: john.doe@company.com<br />
-                <strong>Password:</strong> password
+                <strong>Demo Accounts (Backend):</strong><br />
+                • admin@company.com<br />
+                • jane.smith@company.com<br />
+                • john.doe@company.com<br />
+                <strong>All use password: password</strong>
               </p>
             </div>
           </CardContent>
           
-          <CardFooter>
+          <CardFooter className="flex flex-col space-y-3">
             <Button
               type="submit"
               className="w-full"
               disabled={loading}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {isRegister ? 'Creating account...' : 'Signing in...'}
+                </>
+              ) : (
+                isRegister ? 'Create Account' : 'Sign In'
+              )}
             </Button>
+            <button
+              type="button"
+              onClick={() => setIsRegister(!isRegister)}
+              className="w-full text-sm text-blue-600 hover:text-blue-700 underline"
+            >
+              {isRegister ? 'Already have an account? Sign In' : "Don't have an account? Register"}
+            </button>
           </CardFooter>
         </form>
       </Card>
