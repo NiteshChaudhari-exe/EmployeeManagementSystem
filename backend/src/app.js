@@ -21,6 +21,7 @@ import attendanceRoutes from './routes/attendanceRoutes.js';
 import leaveRoutes from './routes/leaveRoutes.js';
 import payrollRoutes from './routes/payrollRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 app.use('/api/employees', employeeRoutes);
 app.use('/api/departments', departmentRoutes);
@@ -28,6 +29,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/documents', uploadRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK' }));
 

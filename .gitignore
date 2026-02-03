@@ -22,6 +22,9 @@ playwright-report/
 .env.test.local
 .env.production.local
 
+# Uploaded files
+uploads/
+
 # IDE
 .vscode/
 .idea/

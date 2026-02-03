@@ -1,5 +1,3 @@
-// Employees Management Page
-
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '@/app/store';
@@ -18,6 +16,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
+import FileUpload from '@/app/components/FileUpload';
 import { Card, CardHeader, CardTitle, CardContent } from '@/app/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
@@ -456,6 +455,15 @@ const Employees = () => {
               <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
             </div>
           </div>
+          {selectedEmployee && (
+            <div className="col-span-2 border-t pt-4">
+              <FileUpload 
+                resourceType="employee" 
+                resourceId={selectedEmployee._id}
+                description="Employee documents"
+              />
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleEdit}>Save Changes</Button>
